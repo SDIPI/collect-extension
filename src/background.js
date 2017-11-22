@@ -1,129 +1,61 @@
+////////////////
+// Parameters //
+
+const successURL = 'df.sdipi.ch:5000/authsuccess';
+const apiURL = 'http://df.sdipi.ch:5000/';
+
+/////////////////////////
+// API calls functions //
+
 function sendPageView(url) {
-
-    var accessToken = localStorage.getItem('accessToken');
-    if (accessToken) {
-        var payload = {
-            url: url,
-            version: 1,
-            accessToken: accessToken
-        };
-
-        console.log("Page changed : " + url);
-
-        var data = new FormData();
-        data.append( "json", JSON.stringify( payload ) );
-
-        fetch("http://df.sdipi.ch:5000/collect",
-            {
-                method: 'post',
-                headers: {
-                    'Accept': 'application/json, text/plain, */*',
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(payload)
-            })
-            .then(function(res){
-                return res.json();
-            })
-            .then(function(data){
-                console.log("Sent data to SDIPI.");
-                console.log(JSON.stringify(data));
-            })
-            .catch(function(error) {
-                console.error("Problem sending data to SDIPI.");
-                console.error(error);
-            });
-    } else {
+    let accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) {
         console.log("Page change, but user unregistered.");
     }
+    let payload = {
+        url: cleanUrl(url),
+        version: 1,
+        accessToken: accessToken
+    };
+    sendAPI('collect', payload);
 }
 
 function sendPageRequest(url, details) {
-
-    var accessToken = localStorage.getItem('accessToken');
-    if (accessToken) {
-        var payload = {
-            url: url,
-            version: 1,
-            accessToken: accessToken,
-            request: details.url,
-            method: details.method
-        };
-
-        console.log("Page requested : " + details.url);
-
-        var data = new FormData();
-        data.append( "json", JSON.stringify( payload ) );
-
-        fetch("http://df.sdipi.ch:5000/collectRequest",
-            {
-                method: 'post',
-                headers: {
-                    'Accept': 'application/json, text/plain, */*',
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(payload)
-            })
-            .then(function(res){
-                return res.json();
-            })
-            .then(function(data){
-                console.log("Sent data to SDIPI.");
-                console.log(JSON.stringify(data));
-            })
-            .catch(function(error) {
-                console.error("Problem sending data to SDIPI.");
-                console.error(error);
-            });
-    } else {
+    let accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) {
         console.log("Page request, but user unregistered.");
     }
+    let payload = {
+        url: cleanUrl(url),
+        version: 1,
+        accessToken: accessToken,
+        request: cleanUrl(details.url),
+        method: details.method
+    };
+    sendAPI('collectRequest', payload);
 }
 
 function sendEvent(eventData) {
-    var accessToken = localStorage.getItem('accessToken');
-    if (accessToken) {
-        var payload = {
-            url: eventData.url,
-            version: 1,
-            accessToken: accessToken,
-            type: eventData.type,
-            value: eventData.value
-        };
-
-        console.log("Event happened : " + eventData['type']);
-
-        var data = new FormData();
-        data.append( "json", JSON.stringify( payload ) );
-
-        fetch("http://df.sdipi.ch:5000/collectEvent",
-            {
-                method: 'post',
-                headers: {
-                    'Accept': 'application/json, text/plain, */*',
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(payload)
-            })
-            .then(function(res){
-                return res.json();
-            })
-            .then(function(data){
-                console.log("Sent data to SDIPI.");
-                console.log(JSON.stringify(data));
-            })
-            .catch(function(error) {
-                console.error("Problem sending data to SDIPI.");
-                console.error(error);
-            });
-    } else {
+    let accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) {
         console.log("Event, but user unregistered.");
     }
+    let payload = {
+        url: cleanUrl(eventData.url),
+        version: 1,
+        accessToken: accessToken,
+        type: eventData.type,
+        value: eventData.value
+    };
+    sendAPI('collectEvent', payload);
 }
+
+////////////////////////////
+// Chrome event listeners //
 
 chrome.tabs.onUpdated.addListener(
     function(tabId, changeInfo, tab) {
-        var url = changeInfo['url'];
+        let url = changeInfo['url'];
         if (url) {
             sendPageView(changeInfo['url']);
         }
@@ -134,7 +66,7 @@ chrome.webRequest.onBeforeRequest.addListener(
     function(details) {
         if (details.url.indexOf("df.sdipi.ch:5000/") == -1) {
             chrome.tabs.query({}, function(tabs) {
-                for (var i = 0; i < tabs.length; i++) {
+                for (let i = 0; i < tabs.length; i++) {
                     if (details.tabId == tabs[i].id) {
                         sendPageRequest(tabs[i].url, details);
                     }
@@ -168,15 +100,18 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse)
     }
 });
 
-var successURL = 'df.sdipi.ch:5000/authsuccess';
+chrome.tabs.onUpdated.addListener(onFacebookLogin);
+
+/////////////
+// Utility //
 
 function onFacebookLogin(){
     chrome.tabs.query({}, function(tabs) {
-        for (var i = 0; i < tabs.length; i++) {
+        for (let i = 0; i < tabs.length; i++) {
             if (tabs[i].url.indexOf(successURL) !== -1) {
                 params = {};
 
-                var parser = document.createElement('a');
+                let parser = document.createElement('a');
                 parser.href = tabs[i].url;
                 parser.search.substr(1).split('&').map(a => {params[a.split('=')[0]] = a.split('=')[1]});
                 console.log('LOGIN PAGE DETECTED ! Params : ' + params);
@@ -188,4 +123,31 @@ function onFacebookLogin(){
     });
 }
 
-chrome.tabs.onUpdated.addListener(onFacebookLogin);
+function cleanUrl(url) {
+    let parser = document.createElement("a");
+    parser.href = url;
+    return parser.origin + parser.pathname;
+}
+
+function sendAPI(path, payload) {
+    fetch(apiURL + path,
+        {
+            method: 'post',
+            headers: {
+                'Accept': 'application/json, text/plain, */*',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(function(res){
+            return res.json();
+        })
+        .then(function(data){
+            console.info("Sent '/" + path + "'  data to SDIPI.");
+            console.info(JSON.stringify(data));
+        })
+        .catch(function(error) {
+            console.error("Problem sending data to '/" + path + "' of SDIPI.");
+            console.error(error);
+        });
+}
