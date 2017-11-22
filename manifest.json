@@ -1,0 +1,29 @@
+{
+  "manifest_version": 2,
+
+  "name": "Web Digital Footprints",
+  "description": "This extension allows the user to participate in the Web digital Footprints study by the SDIPI.",
+  "version": "0.1.2",
+
+  "browser_action": {
+    "default_icon": "icon.png",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["contentscript.js"]
+    }
+  ],
+  "background": {
+    "scripts": ["background.js"]
+  },
+  "permissions": [
+    "activeTab",
+    "storage",
+    "tabs",
+    "webRequest",
+    "http://*/*",
+    "https://*/*"
+  ]
+}
