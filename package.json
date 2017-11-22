@@ -2,10 +2,14 @@
   "name": "wdf-extension",
   "version": "0.1.2",
   "description": "",
-  "main": "background.js",
+  "main": "src/background.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "node zip.js"
   },
   "author": "Kewin Dousse <me@kewindousse.ch>",
-  "license": ""
+  "license": "",
+  "devDependencies": {
+    "adm-zip": "^0.4.7"
+  }
 }
