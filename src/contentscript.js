@@ -1,3 +1,7 @@
+/*
+ * This file is part of wdf-extension.
+ */
+
 lastScroll = -1;
 
 document.addEventListener('mouseup', function (event) {
