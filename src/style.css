@@ -1,0 +1,23 @@
+body {
+    background-color: #f2f2f2;
+    min-width: 300px;
+}
+
+div.card {
+    margin: 5px;
+    padding: 1rem;
+}
+
+h5 {
+    text-align: center;
+}
+
+.iconTitle {
+    width: 2ch;
+    height: auto;
+}
+
+code#user {
+    font-size: 70%;
+    padding: 0.2rem 0.2rem;
+}
