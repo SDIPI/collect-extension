@@ -34,11 +34,12 @@ document.addEventListener('scroll', function (event) {
 document.addEventListener('visibilitychange', function (event) {
     console.log("VISIBILITY CHANGE");
     var visible;
-    if (document[hidden]) {
+    if (document.hidden) {
         visible = 'out';
     } else {
         visible = 'in'
     }
+    console.log(visible);
     var data = {
         'url' : window.location.href,
         'type' : 'visibility',
