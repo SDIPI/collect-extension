@@ -21,6 +21,11 @@ function sendPageView(url) {
         version: 1,
         accessToken: accessToken
     };
+    let parser = document.createElement("a");
+    parser.href = url;
+    if (parser.origin == "localhost" || parser.origin == "127.0.0.1" || parser.protocol == "chrome:") {
+        return;
+    }
     sendAPI('collect', payload);
 }
 
