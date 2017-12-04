@@ -25,6 +25,11 @@ document.addEventListener('mouseup', function (event) {
 document.addEventListener('mousemove', sendActivity);
 document.addEventListener('keypress', sendActivity);
 document.addEventListener('touchstart', sendActivity);
+document.addEventListener('visibilitychange', function (event) {
+    if (!document.hidden) {
+        sendActivity();
+    }
+});
 
 function sendActivity() {
     var now = (new Date()).getTime();

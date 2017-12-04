@@ -99,8 +99,8 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse)
             break;
 
         case 'activity':
-            console.log("Activity !");
             var url = cleanUrl(request.data.url);
+            console.log("Activity from " + url);
             var time = request.data.time;
             lastActivity[url] = time;
             break;
@@ -122,19 +122,20 @@ nbChecks = 0;
 secondsForInactive = 30;
 
 setInterval(function(){
-    console.log("Getting current tab");
-    chrome.tabs.query({ currentWindow: true, active: true }, function (tabs) {
-        var tab = tabs[0];
-        if (tab) {
-            var url = cleanUrl(tab.url);
-            if (url in activeTime) {
-                if ((new Date()).getTime() < lastActivity[url] + secondsForInactive * 1000) {
-                    activeTime[url] += 1;
+    try {
+        chrome.tabs.query({currentWindow: true, active: true}, function (tabs) {
+            var tab = tabs[0];
+            if (tab) {
+                var url = cleanUrl(tab.url);
+                if (url in activeTime) {
+                    if ((new Date()).getTime() < lastActivity[url] + secondsForInactive * 1000) {
+                        activeTime[url] += 1;
+                    }
+                } else {
+                    activeTime[url] = 1;
                 }
-            } else {
-                activeTime[url] = 1;
             }
-            if (nbChecks++ >= 60) {
+            if (++nbChecks >= 60 && !(Object.keys(activeTime).length === 0)) {
                 console.log("Sending activity to SDIPI");
                 let accessToken = localStorage.getItem('accessToken');
                 if (!accessToken) {
@@ -147,12 +148,16 @@ setInterval(function(){
                     type: 'watch',
                     value: activeTime
                 };
+                console.log("Sent the following activity :");
+                console.log(activeTime);
                 sendAPI('collectWatch', payload);
                 activeTime = {};
                 nbChecks = 0;
             }
-        }
-    });
+        });
+    } catch (error) {
+        console.error(error);
+    }
 }, 1000);
 
 
@@ -197,7 +202,7 @@ function sendAPI(path, payload) {
             return res.json();
         })
         .then(function(data){
-            console.info("Sent '/" + path + "'  data to SDIPI.");
+            console.info("Sent '/" + path + "' data to SDIPI.");
             console.info(JSON.stringify(data));
         })
         .catch(function(error) {
