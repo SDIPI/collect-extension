@@ -91,11 +91,18 @@ chrome.runtime.onInstalled.addListener(function (object) {
 
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse)
 {
-    console.log("EVENT !!!");
     switch(request.message)
     {
         case 'event':
+            console.log("EVENT !");
             sendEvent(request.data);
+            break;
+
+        case 'activity':
+            console.log("Activity !");
+            var url = cleanUrl(request.data.url);
+            var time = request.data.time;
+            lastActivity[url] = time;
             break;
 
         default:
@@ -105,6 +112,49 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse)
 });
 
 chrome.tabs.onUpdated.addListener(onFacebookLogin);
+
+////////////////////
+// Activity check //
+
+lastActivity = {};
+activeTime = {};
+nbChecks = 0;
+secondsForInactive = 30;
+
+setInterval(function(){
+    console.log("Getting current tab");
+    chrome.tabs.query({ currentWindow: true, active: true }, function (tabs) {
+        var tab = tabs[0];
+        if (tab) {
+            var url = cleanUrl(tab.url);
+            if (url in activeTime) {
+                if ((new Date()).getTime() < lastActivity[url] + secondsForInactive * 1000) {
+                    activeTime[url] += 1;
+                }
+            } else {
+                activeTime[url] = 1;
+            }
+            if (nbChecks++ >= 60) {
+                console.log("Sending activity to SDIPI");
+                let accessToken = localStorage.getItem('accessToken');
+                if (!accessToken) {
+                    console.log("Activity to send, but user unregistered.");
+                    return;
+                }
+                let payload = {
+                    version: 1,
+                    accessToken: accessToken,
+                    type: 'watch',
+                    value: activeTime
+                };
+                sendAPI('collectWatch', payload);
+                activeTime = {};
+                nbChecks = 0;
+            }
+        }
+    });
+}, 1000);
+
 
 /////////////
 // Utility //
@@ -134,7 +184,7 @@ function cleanUrl(url) {
 }
 
 function sendAPI(path, payload) {
-    fetch(apiURL + path,
+    return fetch(apiURL + path,
         {
             method: 'post',
             headers: {

@@ -3,6 +3,7 @@
  */
 
 lastScroll = -1;
+lastActivity = (new Date()).getTime();
 
 document.addEventListener('mouseup', function (event) {
     var selected = window.getSelection().toString();
@@ -12,38 +13,27 @@ document.addEventListener('mouseup', function (event) {
         'type' : 'selectText',
         'value' : selected
     };
+    var data2 = {
+        'url' : window.location.href
+    };
     if (selected.length) {
         chrome.runtime.sendMessage(null, {'message': 'event', 'data': data}, function(response) {});
+        sendActivity();
     }
 });
 
-document.addEventListener('scroll', function (event) {
-    var now = Math.floor(Date.now() / 1000);
-    if (now - lastScroll >= 1) {
-        lastScroll = now;
-        console.log("SCROLL");
+document.addEventListener('mousemove', sendActivity);
+document.addEventListener('keypress', sendActivity);
+document.addEventListener('touchstart', sendActivity);
+
+function sendActivity() {
+    var now = (new Date()).getTime();
+    if (now > lastActivity + 2000) {
+        lastActivity = (new Date()).getTime();
         var data = {
             'url' : window.location.href,
-            'type' : 'scroll',
-            'value' : window.scrollY
+            'time' : lastActivity
         };
-        chrome.runtime.sendMessage(null, {'message': 'event', 'data': data}, function(response) {});
+        chrome.runtime.sendMessage(null, {'message': 'activity', 'data': data}, function(response) {});
     }
-});
-
-document.addEventListener('visibilitychange', function (event) {
-    console.log("VISIBILITY CHANGE");
-    var visible;
-    if (document.hidden) {
-        visible = 'out';
-    } else {
-        visible = 'in'
-    }
-    console.log(visible);
-    var data = {
-        'url' : window.location.href,
-        'type' : 'visibility',
-        'value' : visible
-    };
-    chrome.runtime.sendMessage(null, {'message': 'event', 'data': data}, function(response) {});
-});
+}
