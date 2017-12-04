@@ -20,4 +20,4 @@ for (var i in files) {
 }
 zip.writeZip("build/wdf-extension-" + package.version + ".zip");
 console.log("Zip created. Opening Chrome Web Store Developer");
-opn('https://chrome.google.com/webstore/developer/edit/kbmmkipphifelfcboopgohdmallcifap');
+opn('https://chrome.google.com/webstore/developer/dashboard');
