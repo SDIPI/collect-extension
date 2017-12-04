@@ -3,7 +3,7 @@
 
   "name": "Web Digital Footprints",
   "description": "This extension allows the user to participate in the Web digital Footprints study by the SDIPI.",
-  "version": "0.2.1",
+  "version": "0.3.0",
 
   "browser_action": {
     "default_icon": "icon.png",
