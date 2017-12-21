@@ -8,9 +8,54 @@
 const successURL = 'df.sdipi.ch:5000/authsuccess';
 const apiURL = 'http://df.sdipi.ch:5000/';
 
+//////////////////
+// Actions list //
+
+let actions = [];
+
+function addPageview(url) {
+    // We don't want to see chrome pages or local traffic
+    let parser = document.createElement("a");
+    parser.href = url;
+    if (parser.origin.startsWith("localhost") || parser.origin.startsWith("127.0.0.1") || parser.protocol.startsWith("chrome")) {
+        return;
+    }
+
+    let payload = {
+        url: cleanUrl(url),
+        version: 1
+    };
+    addAction('view', payload);
+}
+
+function addPagerequest(url, details) {
+    let payload = {
+        url: cleanUrl(url),
+        version: 1,
+        request: cleanUrl(details.url),
+        method: details.method
+    };
+    addAction('request', payload);
+}
+
+function addEvent(eventData) {
+    let payload = {
+        url: cleanUrl(eventData['url']),
+        version: 1,
+        type: eventData.type,
+        value: eventData.value
+    };
+    addAction('event', payload);
+}
+
+function addAction(type, data) {
+    actions.push({'type': type, 'data': data});
+}
+
 /////////////////////////
 // API calls functions //
 
+/*
 function sendPageView(url) {
     let accessToken = localStorage.getItem('accessToken');
     if (!accessToken) {
@@ -58,33 +103,59 @@ function sendEvent(eventData) {
     };
     sendAPI('collectEvent', payload);
 }
+*/
+
+function sendActions() {
+    let accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) {
+        console.log("Want to send actions, but user unregistered.");
+    }
+    let payload = {
+        version: 1,
+        accessToken: accessToken,
+        type: 'actions',
+        value: actions.slice() // Copies the array so that we can empty it
+    };
+    actions = [];
+    return sendAPI('collectActions', payload)
+        .then(function (data) {
+            console.info("Sent recent actions data to SDIPI.");
+            console.info(JSON.stringify(data));
+        })
+        .catch(function (error) {
+            console.error("Problem sending recent actions of SDIPI.");
+            console.error(error);
+        });
+}
 
 ////////////////////////////
 // Chrome event listeners //
 
 chrome.tabs.onUpdated.addListener(
-    function(tabId, changeInfo, tab) {
+    function (tabId, changeInfo, tab) {
         let url = changeInfo['url'];
         if (url) {
-            sendPageView(changeInfo['url']);
+            //sendPageView(changeInfo['url']);
+            addPageview(url);
         }
     }
 );
 
 chrome.webRequest.onBeforeRequest.addListener(
-    function(details) {
+    function (details) {
         if (details.url.indexOf("df.sdipi.ch:5000/") == -1) {
-            chrome.tabs.query({}, function(tabs) {
+            chrome.tabs.query({}, function (tabs) {
                 for (let i = 0; i < tabs.length; i++) {
                     if (details.tabId == tabs[i].id) {
-                        sendPageRequest(tabs[i].url, details);
+                        // sendPageRequest(tabs[i].url, details);
+                        addPagerequest(tabs[i].url, details);
                     }
                 }
             });
         }
         return {};
     },
-    { urls: ["<all_urls>"] },
+    {urls: ["<all_urls>"]},
     []
 );
 
@@ -94,13 +165,12 @@ chrome.runtime.onInstalled.addListener(function (object) {
     });
 });
 
-chrome.runtime.onMessage.addListener(function(request, sender, sendResponse)
-{
-    switch(request.message)
-    {
+chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
+    switch (request.message) {
         case 'event':
             console.log("EVENT !");
-            sendEvent(request.data);
+            addEvent(request.data);
+            //sendEvent(request.data);
             break;
 
         case 'activity':
@@ -123,10 +193,10 @@ chrome.tabs.onUpdated.addListener(onFacebookLogin);
 
 lastActivity = {};
 activeTime = {};
-nbChecks = 0;
 secondsForInactive = 30;
 
-setInterval(function(){
+// Every sec, log which page is opened
+setInterval(function () {
     try {
         chrome.tabs.query({currentWindow: true, active: true}, function (tabs) {
             var tab = tabs[0];
@@ -140,44 +210,50 @@ setInterval(function(){
                     activeTime[url] = 1;
                 }
             }
-            if (++nbChecks >= 60 && !(Object.keys(activeTime).length === 0)) {
-                console.log("Sending activity to SDIPI");
-                let accessToken = localStorage.getItem('accessToken');
-                if (!accessToken) {
-                    console.log("Activity to send, but user unregistered.");
-                    return;
-                }
-                let payload = {
-                    version: 1,
-                    accessToken: accessToken,
-                    type: 'watch',
-                    value: activeTime
-                };
-                console.log("Sent the following activity :");
-                console.log(activeTime);
-                sendAPI('collectWatch', payload);
-                activeTime = {};
-                nbChecks = 0;
-            }
         });
     } catch (error) {
         console.error(error);
     }
 }, 1000);
 
+// Every 30 sec, send recent actions to SDIPI
+setInterval(function () {
+    try {
+        // Look for token
+        console.log("Sending activity to SDIPI");
+        let accessToken = localStorage.getItem('accessToken');
+        if (!accessToken) {
+            console.log("Activity to send, but user unregistered.");
+            return;
+        }
+
+        // Aggregate and reset watch time
+        activeTimeToSend = JSON.parse(JSON.stringify(activeTime));
+        activeTime = {};
+
+        addAction('watch', activeTimeToSend);
+
+        // Finally send actions
+        sendActions();
+    } catch (error) {
+        console.error(error);
+    }
+}, 30000);
 
 /////////////
 // Utility //
 
-function onFacebookLogin(){
-    chrome.tabs.query({}, function(tabs) {
+function onFacebookLogin() {
+    chrome.tabs.query({}, function (tabs) {
         for (let i = 0; i < tabs.length; i++) {
             if (tabs[i].url.indexOf(successURL) !== -1) {
                 params = {};
 
                 let parser = document.createElement('a');
                 parser.href = tabs[i].url;
-                parser.search.substr(1).split('&').map(a => {params[a.split('=')[0]] = a.split('=')[1]});
+                parser.search.substr(1).split('&').map(a => {
+                    params[a.split('=')[0]] = a.split('=')[1]
+                });
                 console.log('LOGIN PAGE DETECTED ! Params : ' + params);
 
                 localStorage.setItem('accessToken', params.code);
@@ -203,15 +279,7 @@ function sendAPI(path, payload) {
             },
             body: JSON.stringify(payload)
         })
-        .then(function(res){
+        .then(function (res) {
             return res.json();
-        })
-        .then(function(data){
-            console.info("Sent '/" + path + "' data to SDIPI.");
-            console.info(JSON.stringify(data));
-        })
-        .catch(function(error) {
-            console.error("Problem sending data to '/" + path + "' of SDIPI.");
-            console.error(error);
         });
 }
