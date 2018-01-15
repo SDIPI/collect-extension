@@ -29,11 +29,39 @@ function addPageview(url) {
 }
 
 function addPagerequest(url, details) {
+    let parser = document.createElement("a");
+    parser.href = url;
+    let urlSize = (parser.pathname.length + parser.search.length) * 8;
+    let contentSize = 0;
+    if ('requestBody' in details) {
+        // Looking for raw data first
+        if ('raw' in details.requestBody) {
+            try {
+                for (let i = 0; i < details.requestBody.raw.length; i++) {
+                    contentSize += details.requestBody.raw[i].bytes.byteLength;
+                }
+            } catch (e) {
+                console.error("Error while getting raw content size of requestBody :");
+                console.error(e);
+            }
+        }
+        // Then looking for any form data
+        if ('formData' in details.requestBody) {
+            try {
+                contentSize += JSON.stringify(details.requestBody.formData).length * 8;
+            } catch (e) {
+                console.error("Error while getting formData content size of requestBody :");
+                console.error(e);
+            }
+        }
+    }
+    let byteSize = urlSize + contentSize;
     let payload = {
         url: cleanUrl(url),
         version: 1,
         request: cleanUrl(details.url),
-        method: details.method
+        method: details.method,
+        size: byteSize
     };
     addAction('request', payload);
 }
@@ -54,56 +82,6 @@ function addAction(type, data) {
 
 /////////////////////////
 // API calls functions //
-
-/*
-function sendPageView(url) {
-    let accessToken = localStorage.getItem('accessToken');
-    if (!accessToken) {
-        console.log("Page change, but user unregistered.");
-    }
-    let payload = {
-        url: cleanUrl(url),
-        version: 1,
-        accessToken: accessToken
-    };
-    let parser = document.createElement("a");
-    parser.href = url;
-    if (parser.origin == "localhost" || parser.origin == "127.0.0.1" || parser.protocol == "chrome:") {
-        return;
-    }
-    sendAPI('collect', payload);
-}
-
-function sendPageRequest(url, details) {
-    let accessToken = localStorage.getItem('accessToken');
-    if (!accessToken) {
-        console.log("Page request, but user unregistered.");
-    }
-    let payload = {
-        url: cleanUrl(url),
-        version: 1,
-        accessToken: accessToken,
-        request: cleanUrl(details.url),
-        method: details.method
-    };
-    sendAPI('collectRequest', payload);
-}
-
-function sendEvent(eventData) {
-    let accessToken = localStorage.getItem('accessToken');
-    if (!accessToken) {
-        console.log("Event, but user unregistered.");
-    }
-    let payload = {
-        url: cleanUrl(eventData.url),
-        version: 1,
-        accessToken: accessToken,
-        type: eventData.type,
-        value: eventData.value
-    };
-    sendAPI('collectEvent', payload);
-}
-*/
 
 function sendActions() {
     let accessToken = localStorage.getItem('accessToken');
@@ -135,7 +113,6 @@ chrome.tabs.onUpdated.addListener(
     function (tabId, changeInfo, tab) {
         let url = changeInfo['url'];
         if (url) {
-            //sendPageView(changeInfo['url']);
             addPageview(url);
         }
     }
@@ -147,7 +124,6 @@ chrome.webRequest.onBeforeRequest.addListener(
             chrome.tabs.query({}, function (tabs) {
                 for (let i = 0; i < tabs.length; i++) {
                     if (details.tabId == tabs[i].id) {
-                        // sendPageRequest(tabs[i].url, details);
                         addPagerequest(tabs[i].url, details);
                     }
                 }
@@ -156,11 +132,11 @@ chrome.webRequest.onBeforeRequest.addListener(
         return {};
     },
     {urls: ["<all_urls>"]},
-    []
+    ['requestBody']
 );
 
 chrome.runtime.onInstalled.addListener(function (object) {
-    chrome.tabs.create({url: "http://df.sdipi.ch:5000/facebookauth"}, function (tab) {
+    chrome.tabs.create({url: "http://df.sdipi.ch:5000/anonauth"}, function (tab) {
         console.log("New tab launched with http://df.sdipi.ch:5000");
     });
 });
@@ -170,7 +146,6 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
         case 'event':
             console.log("EVENT !");
             addEvent(request.data);
-            //sendEvent(request.data);
             break;
 
         case 'activity':
@@ -186,7 +161,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     }
 });
 
-chrome.tabs.onUpdated.addListener(onFacebookLogin);
+chrome.tabs.onUpdated.addListener(onAnonLogin);
 
 ////////////////////
 // Activity check //
@@ -243,7 +218,7 @@ setInterval(function () {
 /////////////
 // Utility //
 
-function onFacebookLogin() {
+function onAnonLogin() {
     chrome.tabs.query({}, function (tabs) {
         for (let i = 0; i < tabs.length; i++) {
             if (tabs[i].url.indexOf(successURL) !== -1) {

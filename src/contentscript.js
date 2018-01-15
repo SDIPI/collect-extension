@@ -7,14 +7,10 @@ lastActivity = (new Date()).getTime();
 
 document.addEventListener('mouseup', function (event) {
     var selected = window.getSelection().toString();
-    console.log("MOUSEUP");
     var data = {
         'url' : window.location.href,
         'type' : 'selectText',
         'value' : selected
-    };
-    var data2 = {
-        'url' : window.location.href
     };
     if (selected.length) {
         chrome.runtime.sendMessage(null, {'message': 'event', 'data': data}, function(response) {});
