@@ -136,8 +136,8 @@ chrome.webRequest.onBeforeRequest.addListener(
 );
 
 chrome.runtime.onInstalled.addListener(function (object) {
-    chrome.tabs.create({url: "http://df.sdipi.ch:5000/anonauth"}, function (tab) {
-        console.log("New tab launched with http://df.sdipi.ch:5000");
+    chrome.tabs.create({url: apiURL + "anonauth"}, function (tab) {
+        console.log("New tab launched with " + apiURL + "anonauth");
     });
 });
 
