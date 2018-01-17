@@ -1,2 +1,96 @@
 let id = localStorage.getItem('accessToken').substr(0, 8);
 document.getElementById("user").innerHTML = id;
+
+const apiURL = 'http://df.sdipi.ch:5000/';
+
+let accessToken = localStorage.getItem('accessToken');
+if (!accessToken) {
+    console.log("No accessToken ??");
+}
+let payload = {
+    accessToken: accessToken,
+};
+
+function doReconnect(cb) {
+    fetch(apiURL + 'reconnect',
+        {
+            method: 'post',
+            headers: {
+                'Accept': 'application/json, text/plain, */*',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(function (res) {
+            return res.json();
+        })
+        .then(function(json) {
+            if (cb) {
+                cb(json);
+            }
+        });
+}
+
+// doReconnect();
+
+function newId () {
+    let lastToken = localStorage.getItem('accessToken');
+    let newToken = prompt("Please enter the token");
+
+    if (newToken == null || newToken == "") {
+        txt = "User cancelled the prompt.";
+    } else {
+        fetch(apiURL + 'disconnect')
+            .then(function (res) {
+                let result = res.json();
+                console.log(res);
+
+                // Reconnecting
+                let payload = {
+                    accessToken: newToken,
+                };
+                fetch(apiURL + 'reconnect',
+                    {
+                        method: 'post',
+                        headers: {
+                            'Accept': 'application/json, text/plain, */*',
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(payload)
+                    })
+                    .then(function (res) {
+                        return res.json();
+                    })
+                    .then(function(json) {
+                        if ('success' in json) {
+                            console.log("ID change finished ! Correctly reconnected");
+                            localStorage.setItem('accessToken', newToken);
+                            chrome.cookies.set({
+                                url: "http://df.sdipi.ch:5000/",
+                                name: "wdfToken",
+                                value: newToken
+                            });
+                            alert("Successfully connected as " + newToken);
+                        } else {
+                            console.log("FAILED !");
+                            doReconnect();
+                            alert("Connection failed.");
+                        }
+                    });
+            });
+    }
+}
+
+document.getElementById('newIdButton').addEventListener('click', newId);
+
+function handkeKeyPress (event) {
+    console.log(event.key);
+    if (event.key == 'r') {
+        doReconnect();
+    }
+    if (event.key == 'c') {
+        newId();
+    }
+}
+
+document.addEventListener("keypress", handkeKeyPress);
