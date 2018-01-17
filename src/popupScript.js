@@ -1,5 +1,8 @@
 let id = localStorage.getItem('accessToken').substr(0, 8);
+let fullId = localStorage.getItem('accessToken');
+
 document.getElementById("user").innerHTML = id;
+document.getElementById("fullId").innerHTML = fullId;
 
 const apiURL = 'http://df.sdipi.ch:5000/';
 
@@ -91,6 +94,16 @@ function handkeKeyPress (event) {
     if (event.key == 'c') {
         newId();
     }
+    if (event.key == 'u') {
+        unhide();
+    }
 }
 
 document.addEventListener("keypress", handkeKeyPress);
+
+function unhide() {
+    document.getElementById("hiddenAll").classList.remove("startHidden");
+}
+
+document.getElementById("user").addEventListener('click', unhide);
+
