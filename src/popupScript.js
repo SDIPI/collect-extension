@@ -70,7 +70,9 @@ function newId () {
                             localStorage.setItem('accessToken', newToken);
                             chrome.cookies.set({
                                 url: "http://df.sdipi.ch:5000/",
+                                domain: ".sdipi.ch",
                                 name: "wdfToken",
+                                expirationDate: 1577833200,
                                 value: newToken
                             });
                             alert("Successfully connected as " + newToken);
