@@ -4,7 +4,7 @@ let fullId = localStorage.getItem('accessToken');
 document.getElementById("user").innerHTML = id;
 document.getElementById("fullId").innerHTML = fullId;
 
-const apiURL = 'http://df.sdipi.ch:5000/';
+const apiURL = 'https://df.sdipi.ch/';
 
 let accessToken = localStorage.getItem('accessToken');
 if (!accessToken) {
@@ -69,7 +69,7 @@ function newId () {
                             console.log("ID change finished ! Correctly reconnected");
                             localStorage.setItem('accessToken', newToken);
                             chrome.cookies.set({
-                                url: "http://df.sdipi.ch:5000/",
+                                url: "https://df.sdipi.ch/",
                                 domain: ".sdipi.ch",
                                 name: "wdfToken",
                                 expirationDate: 1577833200,

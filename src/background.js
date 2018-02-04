@@ -5,8 +5,8 @@
 ////////////////
 // Parameters //
 
-const successURL = 'df.sdipi.ch:5000/authsuccess';
-const apiURL = 'http://df.sdipi.ch:5000/';
+const successURL = 'df.sdipi.ch/authsuccess';
+const apiURL = 'https://df.sdipi.ch/';
 
 //////////////////
 // Actions list //
@@ -120,7 +120,7 @@ chrome.tabs.onUpdated.addListener(
 
 chrome.webRequest.onBeforeRequest.addListener(
     function (details) {
-        if (details.url.indexOf("df.sdipi.ch:5000/") == -1) {
+        if (details.url.indexOf("df.sdipi.ch/") == -1) {
             chrome.tabs.query({}, function (tabs) {
                 for (let i = 0; i < tabs.length; i++) {
                     if (details.tabId == tabs[i].id) {
